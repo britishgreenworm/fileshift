@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Login</title>
+  <link href='/plugins/iconfont/fonts.css' rel="stylesheet">
+  <link href="/plugins/vue/vuetify.min.css" rel="stylesheet">
+
+  <script src="/plugins/vue/jquery-3.1.1.js"></script>
+  <script src="/plugins/vue/vue.min.js"></script>
+  <script src="/plugins/vue/vuetify.min.js"></script>
+  <script src="/plugins/vue/vue-resource.min.js"></script>
+</head>
+<body >
+  <div id="app">
+    <v-app id="inspire" class="blue-grey darken-4">
+      <v-content>
+        <v-container fluid fill-height>
+          <v-layout align-center justify-center>
+            <v-flex xs12 sm8 md4>
+              <v-card class="elevation-12">
+                <v-toolbar dark color="primary">
+                  <v-toolbar-title>Locked</v-toolbar-title>
+                  <v-spacer></v-spacer>
+                </v-toolbar>
+                <v-card-text>
+                  <v-form action="/login" method="post">
+                    <v-text-field v-bind:error="error" v-bind:hint="hint" @click="clearError" persistent-hint v-model="password" prepend-icon="lock" name="password" label="Password" id="password" type="password"></v-text-field>
+                    <v-card-actions>
+                      <v-spacer></v-spacer>
+                      <v-btn type="submit" color="primary" >Login</v-btn>
+                    </v-card-actions>
+                  </v-form>
+                </v-card-text>
+
+              </v-card>
+            </v-flex>
+          </v-layout>
+        </v-container>
+      </v-content>
+    </v-app>
+  </div>
+
+  <script>
+      new Vue({
+        el: '#app',
+        data: () => ({
+          drawer: null,
+          error: false,
+          hint:"",
+          password:""
+        }),
+        mounted: function() {
+          var url_string = window.location.href;
+          var url = new URL(url_string);
+          var loginError = url.searchParams.get("loginError");
+
+          if (loginError == "password") {
+            this.error = true;
+            this.hint = "Incorrect Password";
+          }
+          if (loginError == "cookie") {
+            this.error = true;
+            this.hint = "There was a problem validating your session, please sign in again";
+          }
+          if (loginError == "admin") {
+            this.error = true;
+            this.hint = "Login with admin password";
+          }
+        },
+        props: {
+          source: String
+        },
+        methods: {
+          clearError: function() {
+            this.error = false;
+            this.hint = "";
+          }
+        }
+      });
+  </script>
+</body>
+
+</html>

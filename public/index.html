@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <link href='/plugins/iconfont/fonts.css' rel="stylesheet">
+  <link href="/plugins/vue/vuetify.min.css" rel="stylesheet">
+
+  <style>
+    [v-cloak] {
+      display: none;
+    }
+
+    #chat-messages {
+      min-height: 10vh;
+      height: 50vh;
+      width: 100%;
+      overflow-y: scroll;
+    }
+
+    .scrolling-wrapper {
+      overflow-x: scroll;
+      overflow-y: hidden;
+      white-space: nowrap;
+    }
+
+    .cardoo {
+      display: inline-block;
+    }
+
+    .chip {
+      padding-left: 5px;
+      padding-right: 5px;
+    }
+
+    }
+  </style>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+</head>
+
+<body >
+  <div id="app">
+    <v-app class="blue-grey darken-4">
+      <v-content v-cloak>
+
+        <v-toolbar dark color="primary">
+          <v-toolbar-side-icon @click.stop="drawer = !drawer"></v-toolbar-side-icon>
+          <v-toolbar-title class="white--text">
+            <v-menu offset-y>
+              <v-btn color="primary" dark slot="activator">{{phase.Name}}</v-btn>
+              <v-list>
+                <v-list-tile v-for="forPhase in phases" :key="forPhase.ID" @click="loadRecruits(forPhase);drawer = false;show=false;leave();">
+                  <v-list-tile-title>{{ forPhase.Name }}</v-list-tile-title>
+                </v-list-tile>
+              </v-list>
+            </v-menu>
+            Board Selection
+          </v-toolbar-title>
+
+          <v-spacer></v-spacer>
+          <v-btn @click.stop="scrollDownFix" icon>
+            <v-icon>chat</v-icon>
+          </v-btn>
+          <v-btn icon @click="openSettings">
+            <v-icon >settings</v-icon>
+          </v-btn>
+        </v-toolbar>
+
+        <v-alert transition="fade-transition" type="info" v-model="AlertWelcome" :value="true">
+          Welcome!  Select the menu icon on the top left of the screen to get started.
+        </v-alert>
+
+        <v-container transition="fade-transition" fluid grid-list-md v-if="show">
+          <v-layout row wrap>
+            <v-flex d-flex xs12 sm9>
+              <v-card color="grey lighten-4">
+                <v-toolbar color="light-blue" dark>
+                  <v-icon>attach_file</v-icon>
+                  <v-toolbar-title>References</v-toolbar-title>
+                </v-toolbar>
+                <v-card-text>
+                  <div class="scrolling-wrapper" style="height:100%">
+                    <span v-for="AppDoc in AppDocs" v-on:dblclick="getPDF(AppDoc.ID);">
+                      <v-card class="cardoo" style="margin-right:5px; margin-left:5px;margin-top:1%; margin-bottom:1%;">
+                        <v-container fluid>
+                          <v-card-media v-bind:src="'/media/t' + AppDoc.ID" style="height:140px; min-width:120px;">
+                          </v-card-media>
+                          <v-flex d-flex xs12>
+                            <v-card-text contain style="overflow-wrap: break-word;" >
+                                <div >{{AppDoc.Name}}</div>
+                            </v-card-text>
+                          </v-flex>
+                        </v-container>
+                      </v-card>
+                  </span>
+                  </div>
+                </v-card-text>
+              </v-card>
+            </v-flex>
+            <v-flex d-flex xs12 sm3>
+              <v-card>
+                <v-toolbar color="light-blue" dark>
+                  <v-icon>fitness_center</v-icon>
+                  <v-toolbar-title>PT Scores</v-toolbar-title>
+                </v-toolbar>
+                <v-list>
+                  <v-list-tile>
+                    <v-list-tile-content>
+                      <v-list-tile-title>Sit-Ups</v-list-tile-title>
+                    </v-list-tile-content>
+                    {{recruit.SitUps}}
+                  </v-list-tile>
+                  <v-list-tile>
+                    <v-list-tile-content>
+                      <v-list-tile-title>Push-Ups</v-list-tile-title>
+                    </v-list-tile-content>
+                    {{recruit.PushUps}}
+                  </v-list-tile>
+                  <v-list-tile>
+                    <v-list-tile-content>
+                      <v-list-tile-title>Running</v-list-tile-title>
+                    </v-list-tile-content>
+                    {{recruit.Run}}
+                  </v-list-tile>
+                  <v-divider inset></v-divider>
+                  <v-list-tile>
+                    <v-list-tile-content>
+                      <v-list-tile-title><b>Score:</b></v-list-tile-title>
+                    </v-list-tile-content>
+                    <b>{{recruit.Score}}</b>
+                  </v-list-tile>
+                  <v-list-tile>
+                    <v-list-tile-content>
+                      <v-list-tile-title>Pull-Ups</v-list-tile-title>
+                    </v-list-tile-content>
+                    {{recruit.PullUps}}
+                  </v-list-tile>
+                </v-list>
+              </v-card>
+            </v-flex>
+            <v-flex d-flex xs12 sm6>
+              <v-card>
+                <v-toolbar color="light-blue" dark>
+                  <v-icon>assignment</v-icon>
+                  <v-toolbar-title>Narrative</v-toolbar-title>
+                </v-toolbar>
+                <v-card-text>
+                  <span v-html="Settings.Narrative"></span>
+                </v-card-text>
+              </v-card>
+            </v-flex>
+            <v-flex d-flex xs12 sm6>
+              <v-card>
+                <v-toolbar color="light-blue" dark>
+                  <v-icon>note</v-icon>
+                  <v-toolbar-title>Notes</v-toolbar-title>
+                </v-toolbar>
+
+                <v-card-text>
+                  <span v-html="recruit.Notes"></span>
+                </v-card-text>
+              </v-card>
+            </v-flex>
+          </v-layout>
+        </v-container>
+        <v-navigation-drawer temporary v-model="drawer" light absolute>
+          <v-list class="pa-1">
+
+            <v-list-tile avatar tag="div">
+              <v-list-tile-avatar>
+
+              </v-list-tile-avatar>
+              <v-list-tile-content>
+                <v-list-tile-title>Select a Candidate</v-list-tile-title>
+              </v-list-tile-content>
+              <v-list-tile-action>
+                <v-btn icon @click.stop="drawer = !drawer">
+                  <v-icon>chevron_left</v-icon>
+                </v-btn>
+              </v-list-tile-action>
+            </v-list-tile>
+          </v-list>
+          <v-list class="pt-0" dense>
+            <v-divider light></v-divider>
+            <v-list-tile v-for="recruit in recruits" :key="recruit.ID" @click="loadRecruit(recruit.ID);drawer = !drawer;show=false;AlertWelcome=false;">
+              <v-list-tile-action>
+                <v-icon></v-icon>
+              </v-list-tile-action>
+              <v-list-tile-content>
+                <v-list-tile-title>{{ recruit.FirstName }} {{ recruit.LastName }}</v-list-tile-title>
+              </v-list-tile-content>
+            </v-list-tile>
+          </v-list>
+        </v-navigation-drawer>
+        <v-bottom-sheet v-model="sheet">
+          <v-layout row wrap>
+            <v-flex d-flex xs12>
+              <v-card>
+                <v-toolbar @click="sheet = false" color="black" dark>
+                  <v-icon>chat</v-icon>
+                  <v-toolbar-title>{{phase.Name}} Board Conversation</v-toolbar-title>
+                  <v-spacer></v-spacer>
+                  <v-icon align-end>expand_more</v-icon>
+                </v-toolbar>
+                <v-card-text>
+                  <div id="chat-messages" class="card-content" v-html="chatContent">
+                  </div>
+                  <div class="row" v-if="joined">
+                    <v-text-field v-model="newMsg" @keyup.enter="send"></v-text-field>
+                    <v-btn block @click="send">Send</v-btn>
+                  </div>
+
+                  <div class="row" v-if="!joined">
+                    <v-text-field v-model.trim="username" label="Username" :counter="8" required @keyup.enter="join()"></v-text-field>
+                    <v-btn block @click="join()">Join</v-btn>
+                  </div>
+                </v-card-text>
+              </v-card>
+            </v-flex>
+          </v-layout>
+        </v-bottom-sheet>
+
+        <v-snackbar
+          :timeout="2000"
+          v-model="chatNotification"
+          >
+          {{ chatNotificationText }}
+          <v-btn dark flat @click="chatNotification = false">Close</v-btn>
+        </v-snackbar>
+      </v-content>
+    </v-app>
+  </div>
+
+  <script src="/plugins/vue/vue.min.js"></script>
+  <script src="/plugins/vue/vuetify.min.js"></script>
+  <script src="/plugins/vue/vue-resource.min.js"></script>
+  <script src="/plugins/vue/jquery-3.1.1.js"></script>
+
+  <script type="text/javascript">
+    vm = new Vue({
+      el: '#app',
+      data() {
+        return {
+          AlertWelcome: true,
+          drawer: null,
+          mini: false,
+          right: null,
+          phase: {},
+          phases: [],
+          recruits: [],
+          recruit: {},
+          AppDocs: [],
+          Settings: {},
+          show: false,
+          ws: null, // Our websocket
+          newMsg: '', // Holds new messages to be sent to the server
+          chatContent: '', // A running list of chat messages displayed on the screen
+          chatNotification: false,
+          chatNotificationText: "",
+          email: null, // Email address used for grabbing an avatar
+          username: null, // Our username
+          joined: false, // True if email and username have been filled in
+          sheet: false,
+          init: false
+        }
+      },
+      created: function(phaseID) {
+        var self = this;
+        this.ws = new WebSocket('wss://' + window.location.host + '/ws');
+        console.log("initiated secure web socket..");
+
+        window.onbeforeunload = function() {
+          this.ws.onclose = function() {
+            this.ws.close();
+          }
+        }
+
+        this.ws.addEventListener('message', function(e) {
+          var msg = JSON.parse(e.data);
+          if (msg.PhaseID == vm.phase.ID) {
+            self.chatContent += '<div class="chip chip-chat-usernames"> ' + msg.username + ' </div>' + msg.message + '<br/>';
+
+            if (vm.sheet != true) {
+              vm.chatNotificationText = msg.username + ": " + msg.message;
+              vm.chatNotification = true;
+            }
+          }
+
+          vm.$nextTick(function() {
+            var element = document.getElementById('chat-messages');
+            element.scrollTop = element.scrollHeight; // Auto scroll to the bottom
+
+          });
+        });
+        this.$http.get('/getPhases').then(function(response) {
+          console.log(response);
+            this.phase = Object.assign({}, response.data[0]);
+            this.phases = response.data;
+            this.$http.get('/getRecruits/' + response.data[0].ID).then(function(response) {
+              this.recruits = response.data ? response.data : [];
+              this.loadRecruits(this.phase);
+            });
+        });
+      },
+      methods: {
+        openSettings: function() {
+          window.open('/admin/recruits');
+        },
+        scrollDownFix: function() {
+
+          this.sheet = true
+
+          vm.$nextTick(function() {
+            var element = document.getElementById('chat-messages');
+            element.scrollTop = element.scrollHeight; // Auto scroll to the bottom
+          });
+        },
+
+        loadRecruits: function(forPhase) {
+          vm.phase.Name = forPhase.Name;
+          vm.phase.ID = forPhase.ID;
+          this.$http.get('/getRecruits/' + forPhase.ID).then(function(response) {
+            this.recruits = response.data ? response.data : [];
+          });
+          this.$http.get("/getSettings/1").then(function(response) {
+            this.Settings = response.data.Settings;
+          });
+        },
+
+        send: function() {
+          if (this.newMsg != '') {
+            this.ws.send(
+              JSON.stringify({
+                username: this.username,
+                phaseID: vm.phase.ID,
+                message: $('<p>').html(this.newMsg).text() // Strip out html
+              }));
+            this.newMsg = ''; // Reset newMsg
+          }
+        },
+
+        join: function() {
+          this.username = $('<p>').html(this.username).text();
+          this.joined = true;
+
+          //get chat history
+          this.$http.get('/getChatMessages/' + this.phase.ID).then(function(response) {
+            tempMsg = response.data;
+            console.log(tempMsg.length);
+            for (var i = 0, len = tempMsg.length; i < len; i++) {
+              vm.chatContent += '<div class="chip">' + tempMsg[i].username + '</div>' + tempMsg[i].message + '<br/>';
+            }
+
+            vm.$nextTick(function() {
+              var element = document.getElementById('chat-messages');
+              element.scrollTop = element.scrollHeight; // Auto scroll to the bottom
+            });
+          });
+        },
+        leave: function() {
+          this.username = "";
+          this.joined = false;
+          vm.chatContent = "";
+        },
+
+        loadRecruit: function(ID) {
+          this.$http.get("/getRecruit/" + ID).success(function(response) {
+            this.recruit = response.Recruit;
+            this.getAppDocs();
+
+          });
+        },
+        getAppDocs: function() {
+
+          this.$http.get('/getAppDocs/' + this.recruit.ID).then(function(response) {
+            this.AppDocs = response.data ? response.data : []
+            this.show = true;
+          });
+        },
+        getPDF: function(ID) {
+          window.open("/plugins/pdf/web/viewer.html?file=/media/" + ID);
+          this.getAppDocs();
+        }
+      }
+    });
+
+  </script>
+</body>
+
+</html>

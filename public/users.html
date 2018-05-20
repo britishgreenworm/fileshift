@@ -1,0 +1,530 @@
+  <!doctype html>
+<html>
+
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Manage Recruits</title>
+
+  <link href='/plugins/iconfont/fonts.css' rel="stylesheet">
+  <link href="/plugins/vue/vuetify.min.css" rel="stylesheet">
+
+  <link rel="stylesheet" href="/plugins/dropzone/basic.css">
+
+  <script src="/plugins/vue/jquery-3.1.1.js"></script>
+
+  <script src="/plugins/vue/vue.min.js"></script>
+  <script src="/plugins/vue/vuetify.min.js"></script>
+  <script src="/plugins/vue/vue-resource.min.js"></script>
+
+  <script src="/plugins/dropzone/dropzone.js"></script>
+  <script src="/plugins/tinymce/tinymce.min.js"></script>
+  <script src="/plugins/pdf/build/pdf.js"></script>
+
+  <style>
+    .modal {
+      overflow-y: scroll;
+    }
+
+    [v-cloak] {
+      display:none;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <v-app class="blue-grey darken-4">
+      <v-content v-cloak >
+        <v-container fluid grid-list-xs>
+        <v-card color="grey lighten-4">
+          <v-toolbar color="blue" dark>
+            <v-toolbar-title>Recruits</v-toolbar-title>
+            <v-spacer></v-spacer>
+            <v-btn @click.stop="updatePhasesDialog = true" icon>
+              <v-icon>library_add</v-icon>
+            </v-btn>
+
+            <v-btn @click.stop="getSettings" icon>
+              <v-icon>assignment</v-icon>
+            </v-btn>
+          </v-toolbar>
+          <v-card-text>
+
+            <v-alert transition="fade-transition" type="info" v-model="AlertEmptyPhases" :value="true">
+              You must add a phase first to manage recruits.  Use menu icons on the top right.
+            </v-alert>
+
+            <v-layout row justify-end>
+              <v-flex sm-2 >
+                <v-menu offset-y>
+                  <v-btn color="primary" dark slot="activator">{{phase.Name}}</v-btn>
+                  <v-list>
+                    <v-list-tile v-model="phase.ID" v-for="phase in phases" :key="phase.ID" @click="loadRecruits(phase)">
+                      <v-list-tile-title>{{ phase.Name }}</v-list-tile-title>
+                    </v-list-tile>
+                  </v-list>
+                </v-menu>
+              </v-flex>
+            </v-layout>
+
+            <v-data-table :headers="recruitsHeaders" :items="recruits" hide-actions>
+              <template slot="items" slot-scope="props">
+                <td ><v-btn icon class="mx-0" @click="getRecruit(props.item.ID)"><v-icon color="blue">edit</v-icon></v-btn></td>
+                <td>{{ props.item.FirstName }}</td>
+                <td>{{ props.item.LastName }}</td>
+                <td><v-btn icon class="mx-0" @click="deleteRecruit(props.item.ID)"><v-icon color="pink">delete</v-icon></v-btn></td>
+              </template>
+            </v-data-table>
+              <v-layout row wrap justify-end>
+                <v-flex sm4 xs12 class="pr-3"><v-text-field label="First Name" v-model="newRecruit.FirstName"></v-text-field></v-flex>
+                <v-flex sm4 xs12 class="pr-3"><v-text-field label="Last Name" v-model="newRecruit.LastName" hint="Press enter to create recruit" v-on:keyup.enter="createRecruit" ></v-text-field></v-flex>
+                <v-flex sm2 xs12><v-btn block class="btn btn-primary" type="button" v-on:click="createRecruit">Create</v-btn></v-flex>
+            </v-layout>
+            <v-card-text>
+            </v-card>
+
+              <v-dialog v-model="updateRecruitDialog" fullscreen transition="dialog-bottom-transition" :overlay="false" scrollable>
+                <v-card tile>
+                  <v-toolbar card dark color="primary">
+                    <v-btn icon @click.native="updateRecruitDialog = false" dark>
+                      <v-icon>close</v-icon>
+                    </v-btn>
+                    <v-toolbar-title>Update Recruit</v-toolbar-title>
+                    <v-spacer></v-spacer>
+                    <v-toolbar-items>
+                      <v-btn dark flat @click.native="updateRecruit">Save</v-btn>
+                    </v-toolbar-items>
+                  </v-toolbar>
+                  <v-card-text>
+
+                      <v-subheader><h2>General Info</h2></v-subheader>
+                      <v-layout row wrap justify-space-between>
+                        <v-flex sm6 xs12 class="pr-3"><v-text-field label="First Name" v-model="Recruit.FirstName" required></v-text-field></v-flex>
+                        <v-flex sm6 xs12 class="pr-3"><v-text-field label="Last Name" v-model="Recruit.LastName" required></v-text-field></v-flex>
+                        <v-flex sm2 xs12 class="pr-3"><v-text-field label="Sit Ups" type="number" v-model="Recruit.SitUps"></v-text-field></v-flex>
+                        <v-flex sm2 xs12 class="pr-3"><v-text-field label="Push Ups" type="number" v-model="Recruit.PushUps"></v-text-field></v-flex>
+                        <v-flex sm2 xs12 class="pr-3"><v-text-field label="Run" v-model="Recruit.Run"></v-text-field></v-flex>
+                        <v-flex sm2 xs12 class="pr-3"><v-text-field label="Score" type="number" v-model="Recruit.Score" hint="Manually input PFT score"></v-text-field></v-flex>
+                        <v-flex sm2 xs12 class="pr-3"><v-text-field label="Pull Ups" type="number" v-model="Recruit.PullUps"></v-text-field></v-flex>
+                      </v-layout>
+                      <v-divider></v-divider>
+                      <v-subheader><h2>Notes</h2></v-subheader>
+                      <textarea id="recruitNotes">{{Recruit.Notes}}</textarea>
+
+                    <v-subheader><h2>References</h2></v-subheader>
+
+                    <v-data-table :headers="appDocHeaders" :items="AppDocs" hide-actions>
+                      <template slot="items" slot-scope="props">
+                    <td><a href="#" @click="getPDF(props.item.ID)">{{ props.item.Name }}</a></td>
+                      <td ><v-btn icon class="mx-0" @click="deleteAppDoc(props.item.ID)"><v-icon color="pink">delete</v-icon></v-btn></td>
+
+                      </template>
+                    </v-data-table>
+
+                    <form id="AppDocDropzone" action="/admin/createAppDoc" class="dropzone" method="post" enctype="multipart/form-data">
+                      <input type="hidden" name="RecruitID" v-model="Recruit.ID">
+
+                    </form>
+                    <!-- when the form is submitted, the server response will appear in this iframe -->
+                    <iframe name="PreventsReload" style="width:0;height:0;border:0; border:none;"></iframe>
+                  </v-card-text>
+                </v-card>
+              </v-dialog>
+
+              <v-dialog v-model="updateSettingsDialog" fullscreen transition="dialog-bottom-transition" :overlay="false" scrollable>
+                <v-card tile>
+                  <v-toolbar card dark color="primary">
+                    <v-btn icon @click.native="updateSettingsDialog = false" dark>
+                      <v-icon>close</v-icon>
+                    </v-btn>
+                    <v-toolbar-title>Update Settings</v-toolbar-title>
+                    <v-spacer></v-spacer>
+                    <v-toolbar-items>
+                      <v-btn dark flat @click.native="updateSettings">Save</v-btn>
+                    </v-toolbar-items>
+                  </v-toolbar>
+                  <v-card-text>
+                    <v-subheader><h2>Narrative</h2></v-subheader>
+                    <textarea id="settingsNarrative">{{Settings.Narrative}}</textarea>
+                  </v-card-text>
+                </v-card>
+              </v-dialog>
+
+              <v-dialog v-model="updatePhasesDialog" fullscreen transition="dialog-bottom-transition" :overlay="false" scrollable>
+                <v-card tile>
+                  <v-toolbar card dark color="primary">
+                    <v-btn icon @click.native="updatePhasesDialog = false" dark>
+                      <v-icon>close</v-icon>
+                    </v-btn>
+                    <v-toolbar-title>Update Phases</v-toolbar-title>
+                    <v-spacer></v-spacer>
+                  </v-toolbar>
+                  <v-card-text>
+                    <v-data-table :headers="phaseHeaders" :items="phases" hide-actions>
+                      <template slot="items" slot-scope="props">
+                        <td>{{ props.item.Name }}</td>
+                        <td><v-btn icon class="mx-0" @click="deletePhase(props.item.ID)"><v-icon color="pink">delete</v-icon></v-btn</td>
+                      </template>
+                    </v-data-table>
+                      <v-layout row wrap justify-end>
+                        <v-flex sm4 xs12 class="pr-3"><v-text-field label="Name" v-model="newPhase.Name" hint="Press enter to create phase" v-on:keyup.enter="createPhase" ></v-text-field></v-flex>
+                        <v-flex sm1 xs12><v-btn block class="btn btn-primary" type="button" v-on:click="createPhase">Create</v-btn></v-flex>
+                    </v-layout>
+                  </v-card-text>
+              </v-dialog>
+</v-container>
+  </div>
+  </v-app>
+  </v-content>
+  </div>
+
+  <script>
+    var vm = new Vue({
+      el: '#app',
+      data: {
+
+        appDocHeaders: [{
+            text: 'Name',
+            value: 'Name',
+            sortable: true
+          },
+          {
+            text: 'Remove',
+            value: 'Remove',
+            sortable: false
+
+          }
+        ],
+
+        phaseHeaders: [
+          {
+            text: 'Name',
+            value: 'Name',
+            sortable: true
+          },
+          {
+            text: 'Remove',
+            value: 'Remove',
+            sortable: false
+
+          }
+        ],
+
+        recruitsHeaders: [{
+            text: 'Edit',
+            value: 'Edit',
+            sortable: false
+          },
+          {
+            text: 'First Name',
+            value: 'FirstName',
+            sortable: true
+          },
+          {
+            text: 'Last Name',
+            value: 'LastName',
+            sortable:true
+          },
+          {
+            text: 'Remove',
+            value: 'Remove',
+            sortable: false
+
+          }
+        ],
+        AlertEmptyPhases: false,
+        tasks: [],
+        phases: [],
+        phase: {},
+        recruits: [],
+        AppDocs: [],
+        AppDoc: {},
+        newPhase: {},
+        newPhase: {},
+        newRecruit: {},
+        Recruit: {},
+        Settings: {},
+        PhaseDropDown: '',
+        updateRecruitDialog: false,
+        updateSettingsDialog: false,
+        updatePhasesDialog: false
+      },
+
+      created: function() {
+        if (this.phases != undefined) {
+          this.$http.get('/getPhases').then(function(response) {
+              this.phase = Object.assign({}, response.data[0]);
+              this.phases = response.data;
+              this.$http.get('/getRecruits/' + response.data[0].ID).then(function(response) {
+                this.recruits = response.data ? response.data : [];
+
+                if (this.phases.length == 0) {
+                  this.AlertEmptyPhases = true;
+                } else {
+                  this.AlertEmptyPhases = false;
+                }
+            });
+          });
+        } else {
+          //suggest to add a phase
+        }
+      },
+      methods: {
+
+        refreshPhases: function() {
+            if (this.phases != undefined) {
+              this.$http.get('/getPhases').then(function(response) {
+                  this.phase = Object.assign({}, response.data[0]);
+                  this.phases = response.data;
+                  this.$http.get('/getRecruits/' + response.data[0].ID).then(function(response) {
+                  this.recruits = response.data ? response.data : [];
+                });
+              });
+            } else {
+              //suggest to add a phase
+            };
+        },
+
+        getSettings: function(settingsID) {
+          this.$http.get("/getSettings/" + settingsID).then(function(response) {
+            this.Settings = response.data.Settings;
+            tinymce.get("settingsNarrative").setContent(response.data.Settings.Narrative);
+            this.updateSettingsDialog = true;
+          });
+        },
+
+        updateSettings: function() {
+          this.Settings.Narrative = tinyMCE.get('settingsNarrative').getContent();
+          this.$http.put('/admin/updateSettings', this.Settings).success(function(response) {
+            console.log("Settings Updated!...");
+
+            this.updateSettingsDialog = false;
+            this.Settings = {};
+          });
+        },
+
+        loadRecruits: function(phase) {
+          vm.phase = phase;
+          this.$http.get('/getRecruits/' + phase.ID).then(function(response) {
+            this.recruits = response.data ? response.data : [];
+          });
+        },
+
+        getRecruit: function(recruitID) {
+          console.log("recruitsID: " + recruitID)
+
+          this.$http.get("/getRecruit/" + recruitID).then(function(response) {
+            console.log("get Recruit...");
+            console.log(response.data.Recruit);
+            this.Recruit = response.data.Recruit;
+            tinymce.get("recruitNotes").setContent(response.data.Recruit.Notes);
+            this.getAppDocs();
+
+            this.updateRecruitDialog = true;
+          })
+        },
+
+        updateRecruit: function() {
+
+          this.Recruit.PushUps = parseInt(this.Recruit.PushUps);
+          this.Recruit.PullUps = parseInt(this.Recruit.PullUps);
+          this.Recruit.SitUps = parseInt(this.Recruit.SitUps);
+          this.Recruit.Score = parseInt(this.Recruit.Score);
+          this.Recruit.Notes = tinyMCE.get('recruitNotes').getContent();
+
+          console.log("update Recruit...");
+          console.log(this.Recruit);
+          //small fix until adding the tinymce vue plugin
+          this.$http.put('/admin/updateRecruit', this.Recruit).success(function(response) {
+            console.log("Recruit Updated!...");
+            console.log(this.Recruit);
+
+            this.loadRecruits(this.phase);
+            this.updateRecruitDialog = false;
+            this.Recruit = {};
+          });
+        },
+
+        createRecruit: function() {
+
+          if (this.phases != undefined) {
+            this.newRecruit.PhaseID = this.phase.ID
+
+            this.$http.put('/admin/createRecruit', this.newRecruit).success(function(response) {
+              this.recruits.push(response.recruit);
+              console.log("Recruit Created...");
+              console.log(this.newRecruit);
+              this.newRecruit = {};
+
+            }).error(function(error) {
+              console.log(error)
+            });
+
+          } else {
+            alert("You need to add a phase first");
+          }
+
+        },
+
+        deleteRecruit: function(recruitID) {
+          this.$http.delete('/admin/deleteRecruit/' + recruitID).success(function(response) {
+
+            console.log(this.recruits.findIndex(i => i.ID === recruitID));
+            this.recruits.splice(this.recruits.findIndex(i => i.ID === recruitID), 1);
+            console.log("Recruit deleted!");
+          }).error(function(error) {
+            console.log(error);
+          })
+        },
+
+        createPhase: function() {
+            console.log("createphase...");
+            console.log(this.newPhase.Name);
+            //add trim function to this.newPhase.Name
+            if (this.newPhase.Name != undefined || "") {
+              this.$http.put('/admin/createPhase', this.newPhase).success(function(response) {
+                  this.phases.push(response.phase);
+                  console.log("Phase Created!")
+                  this.newPhase = {}
+                  this.refreshPhases();
+              }).error(function(error) {
+                  console.log(error);
+              });
+
+            } else {
+              alert("Phase name cannot be blank");
+            };
+        },
+
+        deletePhase: function(phaseID) {
+            this.$http.delete('/admin/deletePhase/' + phaseID).success(function(response) {
+                this.phases.splice(this.recruits.findIndex(i => i.ID === phaseID), 1)
+                console.log("Phase deleted!")
+            }).error(function(error) {
+                console.log(error)
+            })
+        },
+
+        getPDF: function(appDocID) {
+          window.open("/plugins/pdf/web/viewer.html?file=/media/" + appDocID);
+          this.getAppDocs();
+        },
+
+        getAppDocs: function() {
+
+          this.$http.get('/getAppDocs/' + this.Recruit.ID).then(function(response) {
+            this.AppDocs = response.data ? response.data : []
+            console.log("getAppDocs...")
+            console.log(response.data)
+          })
+        },
+
+        deleteAppDoc: function(AppDocId) {
+
+          this.$http.delete('/admin/deleteAppDoc/' + AppDocId).success(function(response) {
+
+            console.log(this.AppDocs.findIndex(i => i.ID === AppDocId));
+            this.AppDocs.splice(this.AppDocs.findIndex(i => i.ID === AppDocId), 1);
+
+          }).error(function(error) {
+            console.log(error);
+          })
+        },
+
+        createAppDoc: function() {
+
+          var files = document.getElementById("AppDocUpload").files;
+          if (!files.length) {
+            alert('Please select a file!');
+            return;
+          }
+
+          var file = files[0];
+          var blob = file.slice();
+          this.AppDoc.Name = file.name;
+          this.AppDoc.RecruitID = this.Recruit.ID;
+
+          var reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = function() {
+            vm.AppDoc.Doc = files[0];
+
+            vm.$http.put('/admin/createAppDoc', vm.AppDoc).success(function(response) {
+
+              console.log(JSON.stringify(response));
+
+              console.log("Recruit Created!");
+              console.log(vm.AppDoc);
+              vm.AppDoc = {};
+              vm.getAppDocs();
+            }).error(function(error) {
+              console.log(error)
+            });
+
+          }
+        }
+      }
+    });
+
+    Dropzone.options.AppDocDropzone = {
+      paramName: "FileUpload",
+      acceptedFiles: "application/pdf",
+
+      accept: function(file, done) {
+
+        var fileReader = new FileReader();
+        fileReader.onload = function() {
+          var typedarray = new Uint8Array(this.result);
+          PDFJS.getDocument(typedarray).then(function(pdf) {
+            pdf.getPage(1).then(function(page) {
+              var scale = 0.5;
+              var viewport = page.getViewport(scale);
+
+
+              var canvas = document.createElement('canvas');
+              var context = canvas.getContext('2d');
+              canvas.height = viewport.height;
+              canvas.width = viewport.width;
+
+              var task = page.render({
+                canvasContext: context,
+                viewport: viewport
+              })
+              task.promise.then(function() {
+                file.preview = canvas.toDataURL('image/jpeg');
+                done();
+              });
+            });
+          });
+        };
+        fileReader.readAsArrayBuffer(file);
+      },
+      sending: function(file, xhr, formData) {
+        formData.append('preview', file.preview);
+
+      },
+      init: function() {
+        myDropzone = this;
+        //Restore initial message when queue has been completed
+        this.on("complete", function(file) {
+          vm.getAppDocs();
+          myDropzone.removeFile(file);
+        });
+      }
+    };
+
+    tinymce.init({
+      selector: 'textarea',
+      height:300,
+      theme: 'modern',
+      plugins: 'preview print preview fullpage paste searchreplace autolink directionality visualblocks visualchars fullscreen link media template table hr pagebreak nonbreaking anchor advlist lists textcolor wordcount contextmenu colorpicker',
+      branding: false,
+      toolbar1: 'formatselect | bold italic strikethrough forecolor backcolor | link | alignleft aligncenter alignright alignjustify  | numlist bullist outdent indent  | removeformat | preview',
+    });
+  </script>
+</body>
+
+</html>
