@@ -1,9 +1,10 @@
 package main
 
 import (
-	"fileshift/models"
 	"fmt"
 	"log"
+
+	"./models"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
@@ -33,8 +34,6 @@ func main() {
 	auth.Static("/", "public/index.html")
 	e.File("/login", "public/login.html")
 
-	auth.GET("/getSettings/:id", handlers.GetSettings(db))
-	admin.PUT("/updateSettings", handlers.UpdateSettings(db))
 	e.POST("/login", handlers.Login(db, handlers.CookieStore))
 
 	var port string

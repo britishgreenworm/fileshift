@@ -47,7 +47,7 @@ func ReadConfig(filePath string, arg string) (string, error) {
 func CheckCookie(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 
-		sess, err := CookieStore.Get(c.Request(), "recreview")
+		sess, err := CookieStore.Get(c.Request(), "fileshift")
 		if err != nil {
 			log.Println(err.Error())
 			return c.Redirect(http.StatusFound, "/login?loginError=cookie")
@@ -65,7 +65,7 @@ func CheckCookie(next echo.HandlerFunc) echo.HandlerFunc {
 
 func CheckAdmin(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		sess, err := CookieStore.Get(c.Request(), "recreview")
+		sess, err := CookieStore.Get(c.Request(), "fileshift")
 		if err != nil {
 			log.Println(err.Error())
 			return c.Redirect(http.StatusFound, "/login?loginError=admin")
@@ -98,7 +98,7 @@ func Login(db *gorm.DB, cookieStore *sessions.CookieStore) echo.HandlerFunc {
 			log.Println("admin logged in...")
 
 			// Create session
-			sess, err := cookieStore.Get(c.Request(), "recreview")
+			sess, err := cookieStore.Get(c.Request(), "fileshift")
 			if err != nil {
 				log.Println(err.Error())
 				return c.Redirect(http.StatusFound, "/login?loginError=admin")
@@ -132,7 +132,7 @@ func Login(db *gorm.DB, cookieStore *sessions.CookieStore) echo.HandlerFunc {
 			log.Println("general user logged in...")
 
 			// Create session
-			sess, err := cookieStore.Get(c.Request(), "recreview")
+			sess, err := cookieStore.Get(c.Request(), "fileshift")
 			if err != nil {
 				log.Println(err.Error())
 				return c.Redirect(http.StatusFound, "/login?loginError=admin")
