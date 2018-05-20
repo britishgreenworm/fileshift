@@ -2,7 +2,7 @@ package handlers
 
 import (
   "fmt"
-  _ "fileshift/models"
+  "fileshift/models"
 )
 
 // CreateRecruit endpoint
